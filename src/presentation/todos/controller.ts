@@ -1,89 +1,77 @@
 import { Request, Response } from 'express';
-import { v4 as uuidv4 } from 'uuid';
-
-interface Todo {
-	id: string;
-	text: string;
-	completedAt: Date;
-}
-
-const todos: Todo[] = [
-	{ id: uuidv4(), text: 'Buy something', completedAt: new Date() },
-	{ id: uuidv4(), text: 'Buy something another', completedAt: new Date() },
-	{ id: uuidv4(), text: 'Buy something better', completedAt: new Date() },
-	{ id: uuidv4(), text: 'Buy something better', completedAt: new Date() },
-	{ id: uuidv4(), text: 'Buy something better', completedAt: new Date() },
-	{ id: uuidv4(), text: 'Buy something better', completedAt: new Date() },
-];
+import { CreateTodoDto, UpdateTodoDto } from '../../domain/dtos';
+import {
+	CreateTodo,
+	DeleteTodo,
+	GetTodo,
+	GetTodosAll,
+	TodoRepository,
+	UpdateTodo,
+} from '../../domain';
 
 export class TodosController {
-	constructor() {}
+	constructor(private readonly todoRepository: TodoRepository) {}
 
 	public getTodos = (req: Request, res: Response) => {
-		return res.json(todos);
+		new GetTodosAll(this.todoRepository).execute().then((todos) => {
+			return res.json({
+				todos,
+				amount: todos.length,
+				completed: todos.filter((todo) => todo.completedAt).length,
+			});
+		});
 	};
 
 	public getTodoById = (req: Request, res: Response) => {
 		const id = req.params.id;
 
-		const todo = todos.find((todo) => todo.id === id);
-
-		if (todo) {
-			return res.status(200).json(todo);
-		} else {
-			return res.status(404).json({
-				error: `ID ${id} was not found`,
-				message: 'Not found',
+		new GetTodo(this.todoRepository)
+			.execute(id)
+			.then((todo) => {
+				return res.status(200).json(todo);
+			})
+			.catch((error) => {
+				return res.status(404).json({
+					error,
+				});
 			});
-		}
 	};
 
 	public createTodo = (req: Request, res: Response) => {
-		const { text } = req.body;
+		const [error, createTodoDto] = CreateTodoDto.create(req.body);
+		if (error) return res.status(400).json({ error });
 
-		if (!text)
-			return res
-				.status(400)
-				.json({ error: 'The text value should have more than 3 letters' });
-
-		const newTodo: Todo = {
-			id: uuidv4(),
-			text,
-			completedAt: new Date(),
-		};
-
-		todos.push(newTodo);
-		return res.status(200).json(newTodo);
+		new CreateTodo(this.todoRepository)
+			.execute(createTodoDto!)
+			.then((todo) => res.status(200).json(todo))
+			.catch((error) =>
+				res.status(404).json({
+					error,
+				}),
+			);
 	};
 
 	public updateTodo = (req: Request, res: Response) => {
 		const id = req.params.id;
+		const [error, updateTodoDto] = UpdateTodoDto.create({
+			...req.body,
+			id,
+		});
 
-		const todo = todos.find((todo) => todo.id === id);
+		if (error) return res.status(404).json({ error });
 
-		if (!todo)
-			return res.status(404).json({ error: `TODO with id ${id} not found` });
-
-		const { text } = req.body;
-
-		if (!text)
-			return res
-				.status(400)
-				.json({ error: 'The text value should have more than 3 letters' });
-
-		todo.text = text;
-
-		res.status(200).json(todo);
+		new UpdateTodo(this.todoRepository)
+			.execute(updateTodoDto!)
+			.then((todo) => res.status(200).json(todo))
+			.catch((error) => res.status(404).json({ error }));
 	};
 
 	public deleteTodo = (req: Request, res: Response) => {
 		const id = req.params.id;
-		const todo = todos.find((todo) => todo.id === id);
 
-		if (!todo)
-			return res.status(404).json({ error: `TODO with id ${id} not found` });
-
-		todos.splice(todos.indexOf(todo), 1);
-		res.json(todo)
+		new DeleteTodo(this.todoRepository)
+			.execute(id)
+			.then((todo) => res.json({ todo }))
+			.catch((error) => res.status(404).json({ error }));
 	};
 }

@@ -1,4 +1,5 @@
 import express, { Router } from 'express';
+import compression from 'compression';
 import path from 'path';
 
 interface Options {
@@ -23,6 +24,7 @@ export class Server {
 	async start() {
 		//* Middlewares
 		this.app.use(express.json()); //raw
+		this.app.use(compression());
 
 		// *Public Folder
 		this.app.use(express.static(this.public_path));

@@ -6,7 +6,6 @@ export class AppRoutes {
 		const router = Router();
 
 		//!  Aca van todas las rutas de la app
-
 		router.use('/api/todos', TodoRoutes.routes);
 
 		return router;
