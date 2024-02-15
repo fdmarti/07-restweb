@@ -13,13 +13,18 @@ export class TodosController {
 	constructor(private readonly todoRepository: TodoRepository) {}
 
 	public getTodos = (req: Request, res: Response) => {
-		new GetTodosAll(this.todoRepository).execute().then((todos) => {
-			return res.json({
-				todos,
-				amount: todos.length,
-				completed: todos.filter((todo) => todo.completedAt).length,
+		new GetTodosAll(this.todoRepository)
+			.execute()
+			.then((todos) => {
+				return res.json({
+					todos,
+					amount: todos.length,
+					completed: todos.filter((todo) => todo.completedAt).length,
+				});
+			})
+			.catch((error) => {
+				res.status(400).json({ error });
 			});
-		});
 	};
 
 	public getTodoById = (req: Request, res: Response) => {
@@ -43,7 +48,7 @@ export class TodosController {
 
 		new CreateTodo(this.todoRepository)
 			.execute(createTodoDto!)
-			.then((todo) => res.status(200).json(todo))
+			.then((todo) => res.status(201).json(todo))
 			.catch((error) =>
 				res.status(404).json({
 					error,
